@@ -1,0 +1,260 @@
+{{extend './layout/layout.html'}}
+
+{{block 'head'}}{{/block}}
+
+{{block 'body'}}
+<div class="container-fluid">
+  <div class="page-title">
+    <h1>所有文章</h1>
+    <a href="post-add.html" class="btn btn-primary btn-xs">写文章</a>
+  </div>
+  <!-- 有错误信息时展示 -->
+  <!-- <div class="alert alert-danger">
+    <strong>错误！</strong>发生XXX错误
+  </div> -->
+  <div class="page-action">
+    <!-- show when multiple checked -->
+    <a class="btn btn-danger btn-sm" href="javascript:;" style="display: none">批量删除</a>
+    <form class="form-inline">
+      <select name="" class="form-control input-sm">
+        <option value="">所有分类</option>
+        <option value="">未分类</option>
+      </select>
+      <select name="" class="form-control input-sm">
+        <option value="">所有状态</option>
+        <option value="">草稿</option>
+        <option value="">已发布</option>
+      </select>
+      <button class="btn btn-default btn-sm">筛选</button>
+    </form>
+    <ul id="pagination-demo" class="pagination pagination-sm pull-right"></ul>
+    <!-- <ul class="pagination pagination-sm pull-right">
+      <li><a href="#">上一页</a></li>
+      <li><a href="#">1</a></li>
+      <li><a href="#">2</a></li>
+      <li><a href="#">3</a></li>
+      <li><a href="#">下一页</a></li>
+    </ul> -->
+  </div>
+  <table class="table table-striped table-bordered table-hover">
+    <thead>
+      <tr>
+        <th class="text-center" width="40"><input type="checkbox"></th>
+        <th>标题</th>
+        <th>作者</th>
+        <th>分类</th>
+        <th class="text-center">发表时间</th>
+        <th class="text-center">状态</th>
+        <th class="text-center" width="100">操作</th>
+      </tr>
+    </thead>
+    <tbody id="user_List">
+      <script id="tpl" type="text/html">
+        {% each listData %}
+      <tr>
+        <td class="text-center"><input type="checkbox"></td>
+        <td>{%$value.article_title%}</td>
+        <td>{{sessionUser && sessionUser.admin_nickname}}</td>
+        <td>{%$value.article_cateid%}</td>
+        <td class="text-center timer">{%$value.article_addtime%}</td>
+        <td class="text-center">{%$value.article_status%}</td>
+        <td class="text-center">
+          <a href="javascript:;" name='edit' data-id='{% $value.article_id %}' class="btn btn-default btn-xs">编辑</a>
+          <a href="javascript:;" name='delete' data-id='{% $value.article_id %}' class="btn btn-danger btn-xs">删除</a>
+        </td>
+      </tr>
+      {% /each %}
+    </script>
+    </tbody>
+  </table>
+</div>
+<!-- 编辑分类模块弹框 -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="exampleModalLabel">New message</h4>
+      </div>
+      <div class="modal-body">
+        <form id="edit_form"></form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn_close" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" id="btn_updata" class="btn btn-primary">Update message</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{/block}}
+
+{{block 'script'}}
+<!-- 编辑模态框内容 -->
+<script type="text/html" id="edit_template">
+  <input type='hidden' name='article_id' value={%article.article_id%}>
+  <div class="form-group">
+    <label for="recipient-name" class="control-label">标题</label>
+    <input type="text" class="form-control" name='article_title' id="recipient-name" value="{% article.article_title %}">
+  </div>
+  <div class="form-group">
+    <label for="message-text" class="control-label" >作者</label>
+    <input type="text" class="form-control" name='article_adminid' id="recipient-slug" value="{% article.article_adminid %}">
+  </div>
+  <div class="form-group">
+    <label for="message-text" class="control-label" >分类</label>
+    <input type="text" class="form-control" name='article_cateid' id="recipient-slug" value="{% article.article_cateid %}">
+  </div>
+  <div class="form-group">
+    <label for="message-text" class="control-label" >发表时间</label>
+    <input type="text" class="form-control" name='article_addtime' id="recipient-slug" value="{% article.article_addtime %}">
+  </div>
+  <div class="form-group">
+    <label for="message-text" class="control-label" >状态</label>
+    <input type="text" class="form-control" name='article_status' id="recipient-slug" value="{% article.article_status %}">
+  </div>
+</script>
+<script src="/public/assets/vendors/twbs-pagination-1.4.1/jquery.twbsPagination.js"></script>
+<script src="/public/assets/vendors/moment/moment.js"></script>
+<script>
+  LoadList(1)
+
+  // 删除功能
+  // 使用事件委托删除，因为需要的元素还没渲染出来
+  $('#user_List').on('click', "a[name=delete]", function () {
+    // 弹框确认是否删除
+    if (!confirm("确认删除吗?")) return
+    var id = $(this).data("id");
+    $.ajax({
+      url: '/api/posts/delete',
+      method: 'get',
+      dataType: 'json',
+      data: {
+        id: id
+      },
+      success: function (data) {
+        if (data.success) {
+          LoadList();
+        }
+      }
+    })
+  })
+
+  //分页功能
+  $('a[name=page]').on('click', function () {
+    var page = $(this).text().trim()
+    LoadList(page)
+    return false
+  })
+
+  function LoadList(page) {
+    $.ajax({
+      url: '/api/index',
+      method: "get",
+      data: {
+        _page: page || 1,
+        _limit: 5
+      },
+      dataType: "json",
+      success: function (resData) {
+        console.log(resData)
+        if (resData.success) {
+          // console.log(moment(resData.data.list.article_addtime).format('YYYY-MM-DD HH:mm:ss'))
+          var htmlStr = template("tpl", {
+            listData: resData.data.list
+          });
+          $("#user_List").html(htmlStr);
+          // arr.forEach((item,index)=>{
+          //   moment(item[index]).format('YYYY-MM-DD HH:mm:ss')
+          // })
+          console.log(arr[1])
+          // $('.timer').each(function(index,element){
+          //   moment(element.innerHTML()).format('YYYY-MM-DD HH:mm:ss')
+          // })
+          //分页
+          var totalPages = Math.ceil(resData.data.count / 5)
+          $('#pagination-demo').twbsPagination({
+            totalPages: totalPages, // 告诉分页插件一共有多少页码
+            visiblePages: 5, // 可见页码
+            first: '首页',
+            last: '最后一页',
+            prev: '上一页',
+            next: '下一页',
+            itemOnPage: 5,
+            onPageClick: function (event, page) {
+              LoadList(page)
+              $('html, body').animate({
+                scrollTop: $('#user_List').offset().top - 50
+              }, 500)
+            }
+          })
+        }
+      },
+      error: function () {
+        console.log(err)
+      }
+    });
+  }
+  // function LoadList() {
+  //   $.ajax({
+  //     url: '/api/posts',
+  //     method: "get",
+  //     dataType: "json",
+  //     success: function (data) {
+  //       console.log(data);
+  //       if (data.success) {
+  //         var htmlStr = template("tpl", {
+  //           listData: data.data
+  //         });
+  //       }
+  //       $("#user_List").html(htmlStr);
+  //     }
+  //   });
+  // }
+
+  //编辑功能
+  $('#user_List').on('click', 'a[name=edit]', function () {
+    var id = $(this).data("id")
+    $.ajax({
+      url: '/api/posts/edit',
+      method: 'get',
+      data: {
+        id: id
+      },
+      dataType: 'json',
+      success: function (data) {
+        if (data.success) {
+          $('#editModal').modal({
+            show: true
+          })
+          var htmlStr = template('edit_template', {
+            article: data.data
+          })
+          $('#edit_form').html(htmlStr)
+        } else {
+          alert('数据不存在！')
+          LoadList()
+        }
+      }
+    })
+  })
+  //编辑更新功能
+  $('#btn_updata').on('click', function () {
+    var forData = $('#edit_form').serialize()
+    console.log(forData)
+    $.ajax({
+      url: '/api/posts/update',
+      method: "POST",
+      data: forData,
+      dataType: 'json',
+      success: function (data) {
+        if (data.success) {
+          $('#editModal').modal('hide')
+          LoadList()
+        }
+      }
+    })
+    return false
+  })
+</script>
+
+{{/block}}

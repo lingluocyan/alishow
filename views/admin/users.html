@@ -1,0 +1,290 @@
+{{extend './layout/layout.html'}}
+
+{{block 'head'}}{{/block}} {{block 'body'}}
+<div class="container-fluid">
+  <div class="page-title">
+    <h1>用户</h1>
+  </div>
+  <!-- 有错误信息时展示 -->
+  <!-- <div class="alert alert-danger">
+    <strong>错误！</strong>发生XXX错误
+  </div> -->
+  <div class="row">
+    <div class="col-md-4">
+      <form id="add_form">
+        <h2>添加新用户</h2>
+        <div class="form-group">
+          <label for="email">邮箱</label>
+          <input id="email" class="form-control" name="admin_email" type="email" placeholder="邮箱" />
+        </div>
+        <div class="form-group">
+          <label for="slug">别名</label>
+          <input id="slug" class="form-control" name="admin_slug" type="text" placeholder="slug" />
+          <p class="help-block">
+            https://example.com/author/<strong>slug</strong>
+          </p>
+        </div>
+        <div class="form-group">
+          <label for="nickname">昵称</label>
+          <input id="nickname" class="form-control" name="admin_nickname" type="text" placeholder="昵称" />
+        </div>
+        <div class="form-group">
+          <label for="password">密码</label>
+          <input id="password" class="form-control" name="admin_pwd" type="text" minlength="6" maxlength="16"
+            placeholder="密码" />
+        </div>
+        <div class="form-group">
+          <button id="btn_add" class="btn btn-primary" type="submit">
+            添加
+          </button>
+        </div>
+      </form>
+    </div>
+    <div class="col-md-8">
+      <div class="page-action">
+        <!-- show when multiple checked -->
+        <a class="btn btn-danger btn-sm" href="javascript:;" style="display: none">批量删除</a>
+      </div>
+      <table class="table table-striped table-bordered table-hover">
+        <thead>
+          <tr>
+            <th class="text-center" width="40"><input type="checkbox" /></th>
+            <th class="text-center" width="80">头像</th>
+            <th>邮箱</th>
+            <th>别名</th>
+            <th>昵称</th>
+            <th>状态</th>
+            <th class="text-center" width="100">操作</th>
+          </tr>
+        </thead>
+        <tbody id="user_List">
+          <tr>
+            <td class="text-center"><input type="checkbox" /></td>
+            <td class="text-center">
+              <img class="avatar" src="/public/assets/img/default.png" />
+            </td>
+            <td>admin@itcast.cn</td>
+            <td>admin</td>
+            <td>管理员</td>
+            <td>激活</td>
+            <td class="text-center">
+              <a href="post-add.php" class="btn btn-default btn-xs">编辑</a>
+              <a href="javascript:;" class="btn btn-danger btn-xs">删除</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<!-- 编辑分类模块弹框 -->
+<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="exampleModalLabel">New message</h4>
+      </div>
+      <div class="modal-body">
+        <form id="edit_form"></form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" id="btn_close" class="btn btn-default" data-dismiss="modal">Close</button>
+        <button type="button" id="btn_updata" class="btn btn-primary">Update message</button>
+      </div>
+    </div>
+  </div>
+</div>
+{{/block}} {{block 'script'}}
+<!-- 编辑分类表单模板 -->
+<!-- 变化的数据用模板引擎渲染 -->
+<!-- 表单隐藏域，可以吧传递给副武器的数据放到表单隐藏域里面 -->
+<!-- 本质就是一个看不见的文本框，一定要有name，才可以通过表单的serialize()找到 -->
+<script type="text/html" id="edit_template">
+  <input type='hidden' name='admin_id' value={%admin.admin_id%}>
+  <div class="form-group">
+    <label for="recipient-name" class="control-label">email</label>
+    <input type="text" class="form-control" name='admin_email' id="recipient-name" value="{% admin.admin_email %}">
+  </div>
+  <div class="form-group">
+    <label for="message-text" class="control-label" >slug</label>
+    <input type="text" class="form-control" name='admin_slug' id="recipient-slug" value="{% admin.admin_slug %}">
+  </div>
+  <div class="form-group">
+    <label for="message-text" class="control-label" >nickname</label>
+    <input type="text" class="form-control" name='admin_nickname' id="recipient-slug" value="{% admin.admin_nickname %}">
+  </div>
+</script>
+
+<script id="tpl" type="text/html">
+  {% each  listData %}
+  <tr>
+      <td class="text-center"><input type="checkbox"></td>
+      <td class="text-center"><img class="avatar" src="/public/assets/img/default.png"></td>
+      <td>{% $value.admin_email %}</td>
+      <td>{% $value.admin_slug %}</td>
+      <td>{% $value.admin_nickname %}</td>
+      <td>{% $value.admin_state %}</td>
+      <td class="text-center">
+        <a href="javascript:;" name="edit" class="btn btn-default btn-xs" data-id="{% $value.admin_id %}">编辑</a>
+        <a href="javascript:;" name="delete" class="btn btn-danger btn-xs" data-id="{% $value.admin_id %}">删除</a>
+      </td>
+    </tr>
+  {%/each%}
+</script>
+<script>
+  LoadList();
+
+  $("#add_form").validate({
+    rules: {
+      admin_email: {
+        required: true,
+        email: true,
+        remote: "/api/users/check/email"
+      },
+      admin_slug: {
+        required: true,
+        remote: "/api/users/check/slug"
+      },
+      admin_nickname: {
+        required: true,
+        remote: "/api/users/check/nickname"
+      },
+      admin_pwd: {
+        required: true,
+        // remote:'/api/users/check/pwd'
+      },
+    },
+    messages: {
+      admin_email: {
+        required: "邮箱不能为空",
+        remote: "邮箱已存在,请更换重试"
+      },
+      admin_slug: {
+        required: "别名不能为空",
+        remote: "别名已存在,请更换重试"
+      },
+      admin_nickname: {
+        required: "昵称不能为空",
+        remote: "昵称已存在,请更换重试"
+      },
+      admin_pwd: {
+        required: '密码不能为空'
+      }
+    },
+    success: function (label) {
+      // label.html('验证通过').addClass('checked')
+    },
+    submitHandler: function () {
+      var formData = $("#add_form").serialize();
+      $.ajax({
+        url: "/api/users/add",
+        method: "post",
+        data: formData,
+        success: function (data) {
+          if (data.success) {
+            LoadList();
+            $("#email").val("");
+            $("#slug").val("");
+            $("#nickname").val("");
+            $("#password").val("");
+          } else {
+            window.alert("重复了!");
+          }
+        }
+      });
+    }
+  });
+  // 事件委托删除，委托给tbody,因为刚开始页面没有删除
+  $("#user_List").on("click", "a[name=delete]", function () {
+    if (!confirm("确认删除吗！！")) return;
+    var id = $(this).data("id");
+    $.ajax({
+      url: "/api/users/delete",
+      method: "get",
+      dataType: "json",
+      data: {
+        id: id
+      },
+      success: function (data) {
+        if (data.success) {
+          LoadList();
+        }
+      }
+    });
+  });
+
+  function LoadList() {
+    $.ajax({
+      url: "/api/users",
+      method: "get",
+      dataType: "json",
+      success: function (data) {
+        console.log(data);
+        if (data.success) {
+          var htmlStr = template("tpl", {
+            listData: data.data
+          });
+        }
+        $("#user_List").html(htmlStr);
+      }
+    });
+  }
+  //编辑功能
+  //通过事件委托来注册点击事件
+  $('#user_List').on('click', 'a[name="edit"]', function () {
+    //添加自定义data-id属性来获取当前点的项id
+    var id = $(this).data('id')
+    //发起ajax请求
+    $.ajax({
+      url: '/api/users/query',
+      method: 'get',
+      data: {
+        id: id
+      },
+      dataType: 'json',
+      success: function (data) {
+        if (data.success) {
+          // 请求成功则模态框显示
+          $('#editModal').modal({
+            show: true
+          })
+          //魔板引擎动态渲染改变的项，也就是里面的内容
+          var htmlStr = template('edit_template', {
+            admin: data.data
+          })
+          // 把生成的内容追加到模态框里
+          $('#edit_form').html(htmlStr)
+        } else {
+          alert('数据不存在！')
+          LoadList();
+        }
+      }
+    })
+    return false
+  })
+  //更新数据
+  $('#btn_updata').on('click', function () {
+    //这里是模态框里的数据也就是用户更改后的数据
+    var formData = $('#edit_form').serialize()
+    console.log(formData)
+    //发起ajax请求
+    $.ajax({
+      url: '/api/users/update',
+      data: formData,
+      dataType: 'json',
+      method: 'POST',
+      success: function (data) {
+        //更新完毕后模态框隐藏
+        $('#editModal').modal('hide')
+        //重新加载
+        LoadList()
+      }
+    })
+  })
+  //注销
+  $('#exit').on('click', function () {
+        window.location.href = '/admin/login'
+  })
+</script>
+{{/block}}

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard &laquo; Admin</title>
+  <link rel="stylesheet" href="/public/assets/vendors/bootstrap/css/bootstrap.css">
+  <link rel="stylesheet" href="/public/assets/vendors/font-awesome/css/font-awesome.css">
+  <link rel="stylesheet" href="/public/assets/vendors/nprogress/nprogress.css">
+  <link rel="stylesheet" href="/public/assets/css/admin.css">
+  <script src="/public/assets/vendors/nprogress/nprogress.js"></script>
+  {{block 'head'}}{{/block}}
+  <style>
+    form label.error {
+      color: red !important;
+    }
+
+    /* form label.checked {
+      color: green !important
+    } */
+    form input.error {
+      border: 2px solid red
+    }
+
+    form input.valid {
+      border: 2px solid green
+    }
+  </style>
+</head>
+
+<body>
+  <script>
+    NProgress.start()
+  </script>
+
+  <div class="main">
+    {{include '../includes/navbar.html'}}
+    <!-- 这里需要让其他页面去定制 -->
+    {{block 'body'}}{{/block}}
+  </div>
+
+  {{include '../includes/aside.html'}}
+
+  <script src="/public/assets/vendors/jquery/jquery.js"></script>
+  <script src="/public/assets/vendors/jquery-validation/jquery.validate.js"></script>
+  <script src="/public/assets/vendors/jquery-validation/localization/messages_zh.js"></script>
+  <script src="/public/assets/vendors/bootstrap/js/bootstrap.js"></script>
+  <script>
+    NProgress.done()
+  </script>
+  <script src="/public/assets/vendors/art-template/template-web.js"></script>
+  <script>
+    // nprogress
+    $(document)
+      .ajaxStart(function () {
+        NProgress.start()
+      })
+      .ajaxStop(function () {
+        NProgress.done()
+      })
+    template.defaults.rules[1].test = /{%([@#]?)[ \t]*(\/?)([\w\W]*?)[ \t]*%}/;
+
+    $(document).ajaxError(function (event, jqxhr, settings) {
+      console.log('event => ', event) // 事件对象
+      console.log('jqxhr => ', jqxhr) // 请求响应对象
+      console.log('settings => ', settings) // 请求相关的配置
+      if (jqxhr.status >= 500) {
+        window.alert('服务端异常，请稍后访问')
+      }
+    })
+  </script>
+  {{block 'script'}}{{/block}}
+</body>
+
+</html>
